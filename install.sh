@@ -59,6 +59,17 @@ else
   echo "- Added source block to $ZSHRC"
 fi
 
+# 3. Install gum for the polished menu (optional; menu falls back to plain text without it).
+if command -v gum >/dev/null 2>&1; then
+  echo "- gum already installed."
+elif command -v brew >/dev/null 2>&1; then
+  echo "- Installing gum (Homebrew) for the profile menu..."
+  brew install gum || echo "  (gum install failed — the menu will use a plain-text fallback)"
+else
+  echo "- Homebrew not found; skipping gum. The menu uses a plain-text fallback."
+  echo "  For the polished menu later: brew install gum"
+fi
+
 cat <<EOF
 
 Done. Next steps in a NEW terminal:

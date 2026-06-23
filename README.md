@@ -2,7 +2,8 @@
 
 Two isolated Claude Code accounts on one Mac — **work** (the default `~/.claude`) and
 **personal** (`~/.claude-personal`) — with separate logins, skills, plugins, MCP servers,
-settings, and history. Switching is a small menu on bare `claude`. Pure zsh, no dependencies.
+settings, and history. Switching is a menu on bare `claude` — a polished arrow-key UI via
+[`gum`](https://github.com/charmbracelet/gum), with a pure-zsh plain-menu fallback if gum isn't installed.
 
 ## Layout
 
@@ -38,7 +39,7 @@ old (personal) login token until you replace it with the work login.
 ## Usage
 
 ```
-claude            # menu: 1) work  2) personal  s) status   (Enter = work)
+claude            # arrow-key menu: work / personal / status  (gum; plain typed fallback without it)
 claude-work       # straight into work
 claude-personal   # straight into personal
 code-personal .   # open VS Code so its Claude extension uses personal (plain `code` = work)
@@ -73,3 +74,6 @@ git -C ~/Projects/Personal/claude-profiles pull   # ~/.zshrc sources the file, s
 - macOS per-profile Keychain isolation is observed behavior, not a documented guarantee. If a
   future Claude Code update ever makes the two profiles share a login, just `/login` each again —
   the config dirs stay fully isolated regardless.
+- The menu uses [`gum`](https://github.com/charmbracelet/gum) for the arrow-key UI; `install.sh`
+  installs it via Homebrew. Without gum, bare `claude` falls back to a plain typed menu —
+  everything still works, it just looks plainer.
