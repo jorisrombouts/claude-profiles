@@ -2,7 +2,8 @@
 
 Run two Claude Code accounts on one Mac — e.g. a **work** (enterprise) login and a **personal**
 (Max/Pro) login — each with its own credentials, history, settings, and MCP servers. Profiles are
-selected per terminal, so you can be signed into **both at once** in different tabs.
+selected per terminal, so you can be signed into **both at once** in different tabs. (Plugins and
+skills are the exception — they're effectively **shared**; see [below](#what-is-and-isnt-isolated).)
 
 It's a thin layer of zsh functions over Claude Code's built-in `CLAUDE_CONFIG_DIR` — no daemon, no
 background process, ~70 lines you can read top to bottom.
@@ -61,13 +62,16 @@ be logged in at the same time.
 
 ## What is (and isn't) isolated
 
-Isolated per profile: **login/credentials, session history, `settings.json`, MCP servers, project trust.**
+**Isolated per profile** (what matters for two accounts): login/credentials, session history,
+`settings.json`, MCP servers, project trust — so two terminals stay independently logged in.
 
-**Plugins and skills are the exception.** Claude Code seeds/reads them from the default `~/.claude`,
-which `CLAUDE_CONFIG_DIR` doesn't fully govern, so a plugin enabled in work can show up in personal.
-`claude-personal` sets the (undocumented) `CLAUDE_CODE_PLUGIN_CACHE_DIR` / `CLAUDE_CODE_PLUGIN_SEED_DIR`
-at its own dir as a best-effort fix; if plugins still bleed across, that's a known Claude Code
-limitation, not this tool. Delete those two lines from `claude-personal` if plugins ever misbehave.
+**Plugins and skills are _not_ reliably isolated — treat them as shared.** Claude Code seeds and
+reads them from the default `~/.claude`, which `CLAUDE_CONFIG_DIR` doesn't govern, so a plugin
+enabled in one profile tends to appear in the other. `claude-personal` sets the (undocumented)
+`CLAUDE_CODE_PLUGIN_CACHE_DIR` / `CLAUDE_CODE_PLUGIN_SEED_DIR` at its own dir as a _best-effort_
+attempt to keep them apart, but it's **unverified** — so assume plugins/skills are common to both
+profiles. (If they still bleed, that's a known Claude Code limitation, not this tool; delete those
+two lines from `claude-personal` if plugins ever misbehave.)
 
 ## Update / Uninstall
 
