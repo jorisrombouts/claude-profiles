@@ -1,8 +1,9 @@
 # claude-profiles
 
-Two isolated Claude Code accounts on one Mac — **work** (the default `~/.claude`) and
-**personal** (`~/.claude-personal`) — with separate logins, skills, plugins, MCP servers,
-settings, and history. Switching is a menu on bare `claude` — a polished arrow-key UI via
+Two Claude Code accounts on one Mac — **work** (the default `~/.claude`) and
+**personal** (`~/.claude-personal`) — with separate logins, MCP servers, settings, project history,
+and memory. (Plugins and skills are **not** fully isolated — see [Known limitations](#known-limitations).)
+Switching is a menu on bare `claude` — a polished arrow-key UI via
 [`gum`](https://github.com/charmbracelet/gum), with a pure-zsh plain-menu fallback if gum isn't installed.
 
 ## Layout
@@ -12,8 +13,8 @@ settings, and history. Switching is a menu on bare `claude` — a polished arrow
 | work     | `~/.claude`         | `claude-work`, bare `claude` default | the IDE, `claude -p`, scripts   |
 | personal | `~/.claude-personal`| `claude-personal`                    | `code-personal` for the IDE     |
 
-Isolation works via `CLAUDE_CONFIG_DIR` (a separate config dir per profile). On macOS each
-profile gets its own Keychain login entry, so both stay signed in independently.
+Isolation works via `CLAUDE_CONFIG_DIR` (a separate config dir per profile) — with the exception
+of plugins and skills (see [Known limitations](#known-limitations)).
 
 ## Install
 
@@ -70,10 +71,29 @@ git -C ~/Projects/Personal/claude-profiles pull   # ~/.zshrc sources the file, s
 ## Notes
 
 - `CLAUDE_CONFIG_DIR` is read at launch — switch profiles by opening a new terminal tab.
-- Skills/plugins are isolated. To share one into work, re-add its marketplace inside `claude-work`.
-- macOS per-profile Keychain isolation is observed behavior, not a documented guarantee. If a
-  future Claude Code update ever makes the two profiles share a login, just `/login` each again —
-  the config dirs stay fully isolated regardless.
 - The menu uses [`gum`](https://github.com/charmbracelet/gum) for the arrow-key UI; `install.sh`
   installs it via Homebrew. Without gum, bare `claude` falls back to a plain typed menu —
   everything still works, it just looks plainer.
+
+## Known limitations
+
+`CLAUDE_CONFIG_DIR` isolates most state, but **not the plugin/skill subsystem** — this is a Claude
+Code limitation this setup can't fully fix.
+
+**Isolated** per profile: logins, MCP servers, `settings.json` (including the `enabledPlugins`
+list), `.claude.json` (project history + trust), session history, and the user-level `CLAUDE.md`.
+
+**Shared / not isolated** (they fall back to the default `~/.claude`):
+
+- **Plugins** — on launch, Claude Code seeds/syncs plugin payloads from `~/.claude/plugins`, so a
+  plugin enabled in one profile shows up (and may activate) in the other's `/plugin` view, and its
+  files land in both `plugins/cache/` dirs. The plugin system has its own *undocumented* env vars
+  (`CLAUDE_CODE_PLUGIN_CACHE_DIR`, `CLAUDE_CODE_PLUGIN_SEED_DIR`, `CLAUDE_CODE_SYNC_PLUGINS`) that
+  `CLAUDE_CONFIG_DIR` does **not** set. Pointing those at each profile's own dir *may* isolate
+  plugins, but it's experimental and untested here.
+- **Skills** (`~/.claude/skills/`) appear to behave the same way.
+- **macOS Keychain** — the login entry may be shared across profiles. If signing into one logs the
+  other out, just `/login` again; the config dirs stay separate regardless.
+
+Bottom line: treat plugins/skills as shared across both profiles. Everything that defines *who
+you're logged in as* and *your settings/history* is properly separated.
