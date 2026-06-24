@@ -17,6 +17,10 @@ if [ -n "${CLAUDECODE:-}" ]; then
   exit 1
 fi
 
+# Warn (don't fail) if Claude Code isn't installed yet — these profiles just wrap it.
+command -v claude >/dev/null 2>&1 || \
+  echo "Warning: 'claude' is not on your PATH. Install Claude Code first: https://claude.com/claude-code" >&2
+
 echo "claude-profiles installer"
 echo "  repo:     $REPO_DIR"
 echo "  work:     $HOME/.claude        (default — your existing config)"
