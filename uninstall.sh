@@ -23,6 +23,22 @@ else
   echo "No claude-profiles block found in $ZSHRC."
 fi
 
+# Offer to remove the OAuth tokens this tool stored in the macOS Keychain (profile dirs stay intact).
+_cp_have_token() { security find-generic-password -s claude-profiles -a "$1" >/dev/null 2>&1; }
+if _cp_have_token work || _cp_have_token personal; then
+  printf '\nThis tool stored profile token(s) in the macOS Keychain (service "claude-profiles").\n'
+  read -r -p "Remove them too? [y/N] " ans || ans=""
+  if [[ "$ans" =~ ^[Yy]$ ]]; then
+    for p in work personal; do
+      _cp_have_token "$p" || continue
+      security delete-generic-password -s claude-profiles -a "$p" >/dev/null 2>&1 \
+        && echo "  removed claude-profiles/$p" || true
+    done
+  else
+    echo "  Left Keychain tokens in place (remove later: security delete-generic-password -s claude-profiles -a personal)."
+  fi
+fi
+
 cat <<EOF
 
 Done. Your profile directories are untouched:
