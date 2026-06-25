@@ -64,14 +64,14 @@ Done. In a NEW terminal:
   source ~/.zshrc
 
 Set up two accounts that stay logged in at the SAME time (macOS):
-  1) claude-work                        -> /login as your WORK (Enterprise) account   (shared Keychain)
-  2) claude-profiles set-token personal -> mint + store a token for your PERSONAL account
+  1) claude-work                  -> /login as your WORK (Enterprise) account   (shared Keychain)
+  2) claude-set-token personal    -> mint + store a token for your PERSONAL account
   (On macOS the login lives in one shared Keychain item, so the personal profile needs its own token
    to stay signed in alongside work. Skip step 2 to just switch accounts with /login instead.)
 
 Usage:
-  claude                 menu: work / personal / status
-  claude-work            straight into work     (= the default ~/.claude; the IDE & scripts use this too)
-  claude-personal        straight into personal
-  claude-profiles status show both logins + auth mode
+  claude              menu: work / personal / status   (pick "status" to see both logins)
+  claude-work         straight into work     (= the default ~/.claude; the IDE & scripts use this too)
+  claude-personal     straight into personal
+  claude-set-token p  one-time: store a token so profile p stays logged in (default personal)
 EOF

@@ -7,7 +7,7 @@
 # (file-based credentials are Linux/Windows only). So to stay signed into BOTH accounts at once we
 # inject a per-profile CLAUDE_CODE_OAUTH_TOKEN — auth precedence #5, above the shared Keychain (#6).
 # Tokens are minted with `claude setup-token` and stored in the Keychain (service "claude-profiles");
-# set one up with `claude-profiles set-token personal`. Without a stored token a profile just falls
+# set one up with `claude-set-token personal`. Without a stored token a profile just falls
 # back to the shared Keychain login, so nothing breaks before you set it up.
 #
 # `command claude` always runs the real binary untouched (it bypasses the menu function below).
@@ -81,82 +81,30 @@ _claude_status() {
   print -r -- ""
 }
 
-# --- management: claude-profiles <cmd> ------------------------------------------------------------
+# --- one-time token setup -------------------------------------------------------------------------
 
-_cp_help() {
-  cat <<'EOF'
-claude-profiles — manage two isolated Claude Code logins on one Mac
-
-  claude-profiles status            show both profiles' login + auth mode
-  claude-profiles set-token <p>     mint + store an OAuth token for profile p (work|personal)
-  claude-profiles remove-token <p>  delete the stored token for profile p
-  claude-profiles help              this help
-
-Launch a profile:
-  claude            menu: work / personal / status
-  claude-work       work     = default ~/.claude
-  claude-personal   personal = ~/.claude-personal
-
-To stay signed into BOTH accounts at once on macOS, give the personal profile its own token:
-  1) claude-work    ->  /login as your work (Enterprise) account   (uses the shared Keychain)
-  2) claude-profiles set-token personal                            (mints + stores a personal token)
-Then a work tab and a personal tab stay logged in independently. Don't run /login inside personal —
-it's authenticated by its token, and /login would overwrite the shared (work) Keychain login.
-EOF
-}
-
-_cp_valid_profile() {
-  case "$1" in
-    work|personal) return 0 ;;
-    *) print -r -- "claude-profiles: profile must be 'work' or 'personal' (got '${1:-}')." >&2; return 1 ;;
-  esac
-}
-
-_cp_set_token() {
-  local profile="${1:-}"
-  _cp_valid_profile "$profile" || return 1
-  print -r -- ""
-  print -r -- "Set up an OAuth token for the '$profile' profile."
-  print -r -- "A login flow opens in your browser — sign in as your ${(U)profile} account."
-  print -r -- "When it finishes it prints a token; copy it, then paste it below."
-  print -r -- ""
-  print -rn -- "Press Enter to run 'claude setup-token' now (Ctrl-C to cancel)… "
+# Mint an OAuth token for a profile and store it in the Keychain, so that profile stays logged in
+# alongside the other (see the header note). Usage: claude-set-token [work|personal]  (default personal).
+# The token is read with hidden input, so it never lands in your shell history.
+claude-set-token() {
+  local profile="${1:-personal}"
+  if [[ $profile != work && $profile != personal ]]; then
+    print -r -- "usage: claude-set-token [work|personal]   (default: personal)" >&2; return 1
+  fi
+  print -r -- "Set up a token for '$profile' — sign in as your ${(U)profile} account when the browser opens."
+  print -rn -- "Press Enter to run 'claude setup-token' (Ctrl-C to cancel)… "
   local discard; read -r discard || return 1
-  command claude setup-token || { print -r -- "setup-token failed or was cancelled." >&2; return 1; }
-  print -r -- ""
+  command claude setup-token || { print -r -- "setup-token cancelled." >&2; return 1; }
   local token
-  print -rn -- "Paste the token for '$profile' (input hidden): "
+  print -rn -- "Paste the token (input hidden): "
   read -rs token; print -r -- ""
-  token="$(print -r -- "$token" | tr -d '[:space:]')"
-  if [[ -z $token ]]; then print -r -- "No token entered; nothing stored." >&2; return 1; fi
+  token="${token//[[:space:]]/}"
+  [[ -z $token ]] && { print -r -- "No token entered; nothing stored." >&2; return 1; }
   if security add-generic-password -s claude-profiles -a "$profile" -w "$token" -U 2>/dev/null; then
-    print -r -- "✔ Stored '$profile' token in the macOS Keychain (service: claude-profiles)."
-    print -r -- "  '$profile' sessions now use it. Run 'claude-profiles status' to verify."
+    print -r -- "✔ Stored '$profile' token. Launch 'claude' and pick 'status' to verify."
   else
     print -r -- "Failed to store the token in the Keychain." >&2; return 1
   fi
-}
-
-_cp_remove_token() {
-  local profile="${1:-}"
-  _cp_valid_profile "$profile" || return 1
-  if security delete-generic-password -s claude-profiles -a "$profile" >/dev/null 2>&1; then
-    print -r -- "✔ Removed '$profile' token. It will fall back to the shared Keychain login."
-  else
-    print -r -- "No stored token for '$profile'."
-  fi
-}
-
-claude-profiles() {
-  local cmd="${1:-help}"
-  (( $# )) && shift
-  case "$cmd" in
-    status)         _claude_status ;;
-    set-token)      _cp_set_token "$@" ;;
-    remove-token)   _cp_remove_token "$@" ;;
-    help|-h|--help) _cp_help ;;
-    *) print -r -- "claude-profiles: unknown command '$cmd'." >&2; _cp_help; return 1 ;;
-  esac
 }
 
 # --- bare `claude` menu ---------------------------------------------------------------------------
