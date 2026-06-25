@@ -13,7 +13,7 @@ they're effectively **shared**; see [What is and isn't isolated](#what-is-and-is
 
 ```sh
 # 1. Put the tool somewhere permanent and install it
-git clone <repo-url> ~/tools/claude-profiles    # or just copy this folder there
+git clone https://github.com/jorisrombouts/claude-profiles.git ~/tools/claude-profiles    # or just copy this folder there
 cd ~/tools/claude-profiles && ./install.sh && source ~/.zshrc
 
 # 2. Log into your FIRST account — it becomes "work" (the default ~/.claude)
@@ -43,7 +43,7 @@ claude-profiles status    # see both logins at a glance
 ## Install
 
 ```sh
-git clone <repo-url> ~/tools/claude-profiles   # clone (or copy this folder) somewhere permanent
+git clone https://github.com/jorisrombouts/claude-profiles.git ~/tools/claude-profiles   # clone (or copy this folder) somewhere permanent
 cd ~/tools/claude-profiles
 ./install.sh                                    # wires ~/.zshrc, creates ~/.claude-personal, installs gum
 source ~/.zshrc                                 # or just open a new terminal
