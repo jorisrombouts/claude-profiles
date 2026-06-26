@@ -163,6 +163,10 @@ consistently in `claude-profiles.zsh` (and in `install.sh`). Everything else fol
   rather than the live one. Run `claude-setup` to make it real.
 - **macOS asks for Keychain permission when launching personal** — click **Always Allow** so the
   launcher can read the stored token without prompting each time.
+- **`claude-personal` re-asks "Do you trust this folder?" every launch** — known upstream bug with
+  token auth ([claude-code#36403](https://github.com/anthropics/claude-code/issues/36403)): sessions
+  using `CLAUDE_CODE_OAUTH_TOKEN` don't persist folder trust, so just accept it each time. Harmless,
+  and `claude-work` (Keychain) remembers trusted folders normally.
 - **Logging into one profile signs the other out** — you ran `/login` inside personal (which overwrites
   the shared Keychain). Re-`/login` work, and authenticate personal with a token (`claude-setup`).
 ```
