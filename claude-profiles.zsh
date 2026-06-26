@@ -19,47 +19,38 @@ _cp_token() { security find-generic-password -s claude-profiles -a "$1" -w 2>/de
 
 # --- profile launchers ----------------------------------------------------------------------------
 
-# work = the default ~/.claude (native Keychain login). If a 'work' token is stored, it's used instead.
-claude-work() {
-  local tok; tok="$(_cp_token work)"
-  if [[ -n $tok ]]; then
-    ( export CLAUDE_CODE_OAUTH_TOKEN="$tok"; command claude "$@" )   # subshell: doesn't leak into your shell
-  else
-    command claude "$@"
-  fi
-}
-
-# personal = ~/.claude-personal, with its own OAuth token (if stored) so it stays logged in as the
-# personal account regardless of the shared Keychain. The CLAUDE_CODE_PLUGIN_* vars are a best-effort,
-# undocumented attempt to keep work's plugins from seeding into personal; drop them if plugins misbehave.
-claude-personal() {
-  local tok; tok="$(_cp_token personal)"
-  (   # subshell: exports stay scoped to this launch, never leak into your interactive shell
-    export CLAUDE_CONFIG_DIR="$HOME/.claude-personal"
-    export CLAUDE_CODE_PLUGIN_CACHE_DIR="$HOME/.claude-personal/plugins"
-    export CLAUDE_CODE_PLUGIN_SEED_DIR="$HOME/.claude-personal/plugins"
+# Run the real `claude` binary with a profile's launch environment: personal gets its own config dir
+# (plus best-effort plugin dirs), and either profile gets its stored OAuth token injected when present.
+# The token is read by the caller and passed in, so the Keychain is touched at most once per launch.
+# Redirections on the call apply to claude (e.g. `_cp_exec personal "$t" auth status </dev/null`).
+_cp_exec() {
+  local profile="$1" tok="$2"; shift 2
+  (   # subshell: these exports stay scoped to this launch, never leak into your interactive shell
+    if [[ $profile == personal ]]; then
+      export CLAUDE_CONFIG_DIR="$HOME/.claude-personal"
+      # best-effort, undocumented: keep work's plugins from seeding into personal (drop if they misbehave)
+      export CLAUDE_CODE_PLUGIN_CACHE_DIR="$HOME/.claude-personal/plugins"
+      export CLAUDE_CODE_PLUGIN_SEED_DIR="$HOME/.claude-personal/plugins"
+    fi
     [[ -n $tok ]] && export CLAUDE_CODE_OAUTH_TOKEN="$tok"
     command claude "$@"
   )
 }
+
+# work = the default ~/.claude (native Keychain login); personal = ~/.claude-personal. Each injects its
+# own stored token if one is set (see `claude-set-token`), else falls back to the shared Keychain login.
+claude-work()     { local t; t="$(_cp_token work)";     _cp_exec work     "$t" "$@"; }
+claude-personal() { local t; t="$(_cp_token personal)"; _cp_exec personal "$t" "$@"; }
 
 # --- status ---------------------------------------------------------------------------------------
 
-# Run `claude auth status` with a profile's exact launch env, so the reported account matches what you
-# actually get when you launch it. profile = work|personal.
-_cp_auth_status_raw() {
-  local profile="$1" tok; tok="$(_cp_token "$profile")"
-  (
-    [[ $profile == personal ]] && export CLAUDE_CONFIG_DIR="$HOME/.claude-personal"
-    [[ -n $tok ]] && export CLAUDE_CODE_OAUTH_TOKEN="$tok"
-    command claude auth status --text </dev/null 2>/dev/null
-  )
-}
-
-# Summarise a profile's login as "<method> (<email>)" / "not logged in" / "unknown". Output is CAPTURED
-# (stdin /dev/null) so the TUI's colour probe can't leak escape codes into the terminal.
-_claude_login_line() {
-  _cp_auth_status_raw "$1" | awk '
+# Report a profile's account for the status view. We query `claude auth status` WITHOUT injecting the
+# token: with a token set it prints only "Auth token: CLAUDE_CODE_OAUTH_TOKEN" (no account), so instead
+# we read the profile's cached/Keychain identity. The auth: column (from the stored token) already says
+# whether that profile launches via token or Keychain. Output is CAPTURED (stdin /dev/null) so the TUI's
+# colour probe can't leak escape codes into the terminal.
+_claude_login_line() {   # <profile>
+  _cp_exec "$1" "" auth status --text </dev/null 2>/dev/null | awk '
     /^[Ll]ogin method:/ { sub(/^[^:]*:[[:space:]]*/, ""); method=$0 }
     /^[Ee]mail:/        { sub(/^[^:]*:[[:space:]]*/, ""); email=$0 }
     tolower($0) ~ /not logged in/ { no=$0 }
