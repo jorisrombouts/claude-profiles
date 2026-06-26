@@ -6,46 +6,43 @@ terminal, so you can be **signed into both at once** in different tabs.
 
 It's a thin layer of zsh functions over Claude Code's built-in `CLAUDE_CONFIG_DIR`, plus one small
 trick for macOS (a per-profile OAuth token, explained [below](#how-it-works)). No daemon, no
-background process — ~140 lines you can read top to bottom. (Plugins and skills are the exception:
+background process — ~200 lines you can read top to bottom. (Plugins and skills are the exception:
 they're effectively **shared**; see [What is and isn't isolated](#what-is-and-isnt-isolated).)
 
 ## Quickstart
 
 ```sh
-# 1. Put the tool somewhere permanent and install it
-git clone https://github.com/jorisrombouts/claude-profiles.git ~/tools/claude-profiles    # or just copy this folder there
-cd ~/tools/claude-profiles && ./install.sh && source ~/.zshrc
+# Install — clones, wires ~/.zshrc, installs gum, then OFFERS to set up your accounts right away.
+git clone https://github.com/jorisrombouts/claude-profiles.git ~/tools/claude-profiles   # or copy this folder
+cd ~/tools/claude-profiles && ./install.sh
 
-# 2. Log into your FIRST account — it becomes "work" (the default ~/.claude)
-claude-work                       # then, in the session:  /login
+# Everyday use — both accounts stay logged in, one per terminal:
+claude-work        # work
+claude-personal    # personal
+claude             # menu (work / personal / status)
 
-# 3. Add a SECOND account ("personal") that stays logged in at the same time
-claude-set-token personal         # runs `claude setup-token`: log in as account #2, paste the token
-
-# Done — use them in separate tabs, both logged in at once:
-claude-work               # account #1
-claude-personal           # account #2
-claude                    # menu (work / personal / status) — pick "status" to see both logins
+# Set up or change your accounts anytime (the installer runs this for you the first time):
+claude-setup       # guided: detects what's done, walks you through work + personal
 ```
 
 > **"work" and "personal" are just labels** for two config profiles — map them to whichever two
-> accounts you like (two work orgs, work + personal, a client account, …). On macOS the second one
-> needs its own token; step 3 sets that up. That's the whole tool.
+> accounts you like (two work orgs, work + personal, a client account, …). `claude-setup` walks you
+> through both.
 
 ## Requirements
 
 - **macOS** with **zsh** (the default shell).
 - **Claude Code** installed (`claude` on your `PATH`).
 - A subscription on each account (Pro/Max/Team/Enterprise) — the per-profile token needs one.
-- **[gum](https://github.com/charmbracelet/gum)** for the picker menu — optional; `install.sh`
-  installs it via Homebrew, and the menu falls back to a plain text prompt without it.
+- **[gum](https://github.com/charmbracelet/gum)** for the menu + setup wizard — optional; `install.sh`
+  installs it via Homebrew, and everything falls back to plain text prompts without it.
 
 ## Install
 
 ```sh
 git clone https://github.com/jorisrombouts/claude-profiles.git ~/tools/claude-profiles   # clone (or copy this folder) somewhere permanent
 cd ~/tools/claude-profiles
-./install.sh                                    # wires ~/.zshrc, creates ~/.claude-personal, installs gum
+./install.sh                                    # wires ~/.zshrc, creates ~/.claude-personal, installs gum, offers setup
 source ~/.zshrc                                 # or just open a new terminal
 ```
 
@@ -55,29 +52,29 @@ source ~/.zshrc                                 # or just open a new terminal
 Your **existing** `~/.claude` (whatever you're logged into now) is left untouched and becomes the
 **work** profile.
 
-## Set up two accounts that stay logged in at once
+## Setting up your two accounts
 
-On macOS the login is stored in **one shared Keychain item**, so two profiles can't both use it at the
-same time — the second `/login` overwrites the first. The fix: keep **work** on the native Keychain
-login, and give **personal** its own token.
+`install.sh` offers to run the guided setup for you. You can also run it anytime:
 
 ```sh
-# 1) Work uses the normal Keychain login:
-claude-work                       # then inside the session:  /login   (your work / Enterprise account)
-
-# 2) Personal gets its own token (one time):
-claude-set-token personal
-#    -> runs `claude setup-token`; sign in as your PERSONAL account, copy the token, paste it back.
+claude-setup
 ```
 
-That's it — a work tab and a personal tab now stay logged in **independently**.
+It detects what's already done and walks you through both accounts: confirm (or switch) your **work**
+login, then set up the **personal** account (a browser opens to log in). Re-run it whenever you want to
+check or change things — nothing destructive happens without a confirm.
 
-> **Don't run `/login` inside the personal profile.** It's authenticated by its token; a `/login`
-> there would overwrite the shared (work) Keychain login. To change the personal account, re-run
-> `claude-set-token personal`.
+**Why personal needs a token:** on macOS the login lives in **one shared Keychain item**, so two
+profiles can't both use it — the second `/login` overwrites the first. So `claude-setup` keeps **work**
+on the native Keychain login and gives **personal** its own long-lived token (stored in the Keychain),
+which is what lets both stay signed in at the same time.
 
-Prefer to keep it simple? Skip step 2 and just `/login` again whenever you switch accounts (one at a
-time, not both-at-once).
+> **Don't run `/login` inside the personal profile.** It's authenticated by its token; a `/login` there
+> would overwrite the shared (work) Keychain login. To change the personal account, run `claude-setup`
+> (or `claude-set-token personal`).
+
+Prefer to do it by hand? `claude-work` then `/login` (work); `claude-set-token personal` (personal). Or
+skip the token entirely and just `/login` to switch accounts one at a time.
 
 ## Usage
 
@@ -85,7 +82,8 @@ time, not both-at-once).
 claude              # menu: work / personal / status   (arrow keys; plain prompt without gum)
 claude-work         # straight into work   (= the default ~/.claude — the IDE and scripts use this too)
 claude-personal     # straight into personal
-claude-set-token p  # one-time: store a token so profile p stays logged in (p = work|personal, default personal)
+claude-setup        # guided setup / re-check both accounts (re-runnable, idempotent)
+claude-set-token p  # advanced: store a token directly (p = work|personal, default personal)
 ```
 
 `claude` with arguments (`claude -p …`, `claude mcp …`), the IDE, and scripts always run the real
@@ -115,12 +113,12 @@ So on macOS, `claude-personal` injects `CLAUDE_CODE_OAUTH_TOKEN` (read from the 
 is stored for it. That token sits **above** the shared Keychain login in Claude Code's [auth
 precedence](https://code.claude.com/docs/en/authentication), so a personal tab authenticates as the
 personal account while a work tab uses the Keychain — both at the same time. No stored token? The
-profile just falls back to the shared Keychain login, so nothing breaks before you run `claude-set-token`.
+profile just falls back to the shared Keychain login, so nothing breaks before you run `claude-setup`.
 
 Tokens are kept in the macOS Keychain (service `claude-profiles`, account `work`/`personal`) — never in
-a plaintext dotfile, and `claude-set-token` reads them with hidden input so they never reach your shell
-history. You can give **work** a token too (`claude-set-token work`) if you'd rather pin both; by
-default work stays on its native Keychain login.
+a plaintext dotfile, and they're read with hidden input so they never reach your shell history. You can
+give **work** a token too (`claude-set-token work`) if you'd rather pin both; by default work stays on
+its native Keychain login.
 
 ## What is (and isn't) isolated
 
@@ -136,8 +134,8 @@ profiles. (Delete those two lines from `claude-personal` if plugins ever misbeha
 
 ## Token lifecycle
 
-- A `setup-token` token is valid for about **a year**. When it expires, refresh it:
-  `claude-set-token personal`.
+- A token is valid for about **a year**. When it expires, refresh it: `claude-setup` (or
+  `claude-set-token personal`).
 - Remove a token (fall back to the Keychain login):
   `security delete-generic-password -s claude-profiles -a personal`.
 - A token is **scoped to inference only** — it can't establish [Remote
@@ -158,12 +156,13 @@ consistently in `claude-profiles.zsh` (and in `install.sh`). Everything else fol
 
 ## Troubleshooting
 
-- **`command not found: claude-personal`** — you haven't `source ~/.zshrc`'d (or you're not in zsh).
-- **Menu is a plain prompt, not arrow keys** — `gum` isn't installed: `brew install gum`.
+- **`command not found: claude-setup`** — you haven't `source ~/.zshrc`'d yet (or you're not in zsh).
+- **Menu/wizard is plain text, not styled** — `gum` isn't installed: `brew install gum`.
 - **`status` shows the wrong or duplicate account for a profile** — without its own token a profile
   falls back to the *shared* Keychain login, and `status` reports that profile's last-used account
-  rather than the live one. Run `claude-set-token personal` to make it real.
+  rather than the live one. Run `claude-setup` to make it real.
 - **macOS asks for Keychain permission when launching personal** — click **Always Allow** so the
   launcher can read the stored token without prompting each time.
 - **Logging into one profile signs the other out** — you ran `/login` inside personal (which overwrites
-  the shared Keychain). Re-`/login` work, and authenticate personal with a token instead.
+  the shared Keychain). Re-`/login` work, and authenticate personal with a token (`claude-setup`).
+```

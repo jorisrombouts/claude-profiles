@@ -58,20 +58,34 @@ else
   echo "- Homebrew not found; skipping gum. The menu uses a plain-text fallback."
 fi
 
+# 4. Offer the guided account setup (interactive terminals only; logging in needs a browser).
+run_setup=0
+if [ -t 0 ] && [ -t 1 ]; then
+  echo
+  if command -v gum >/dev/null 2>&1; then
+    gum confirm "Set up your two Claude accounts now?" && run_setup=1 || run_setup=0
+  else
+    printf "Set up your two Claude accounts now? [Y/n] "
+    read -r _ans || _ans=""
+    case "$_ans" in [Nn]*) run_setup=0 ;; *) run_setup=1 ;; esac
+  fi
+fi
+if [ "$run_setup" = 1 ]; then
+  # The functions are zsh; run the wizard in zsh, sourcing the file we just wired up.
+  zsh -c "source '$REPO_DIR/claude-profiles.zsh'; claude-setup" || true
+fi
+
 cat <<EOF
 
-Done. In a NEW terminal:
-  source ~/.zshrc
+Done — claude-profiles is wired into ~/.zshrc.
 
-Set up two accounts that stay logged in at the SAME time (macOS):
-  1) claude-work                  -> /login as your WORK (Enterprise) account   (shared Keychain)
-  2) claude-set-token personal    -> mint + store a token for your PERSONAL account
-  (On macOS the login lives in one shared Keychain item, so the personal profile needs its own token
-   to stay signed in alongside work. Skip step 2 to just switch accounts with /login instead.)
+Set up or change your accounts anytime with the guided wizard:
+  claude-setup     detects what's done, walks you through work + personal (a browser opens per login)
 
-Usage:
-  claude              menu: work / personal / status   (pick "status" to see both logins)
-  claude-work         straight into work     (= the default ~/.claude; the IDE & scripts use this too)
-  claude-personal     straight into personal
-  claude-set-token p  one-time: store a token so profile p stays logged in (default personal)
+Everyday use:
+  claude           menu: work / personal / status
+  claude-work      work      (= the default ~/.claude; the IDE & scripts use this too)
+  claude-personal  personal
+
+(In a brand-new terminal, run 'source ~/.zshrc' first if the commands aren't found.)
 EOF
