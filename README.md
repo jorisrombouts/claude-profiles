@@ -122,15 +122,31 @@ its native Keychain login.
 
 ## What is (and isn't) isolated
 
-**Isolated per profile:** login/credentials, session history, `settings.json`, MCP servers, project
-trust — so two terminals stay independently logged in.
+Each profile is its own `CLAUDE_CONFIG_DIR` (`~/.claude` for work, `~/.claude-personal` for personal),
+so everything Claude stores there is **per profile**. The exceptions are things that live in the **repo
+you open**, and **plugins/skills** (Claude seeds those from the default dir).
 
-**Plugins and skills are _not_ reliably isolated — treat them as shared.** Claude Code seeds and reads
-them from the default `~/.claude`, which `CLAUDE_CONFIG_DIR` doesn't govern, so a plugin enabled in one
-profile tends to appear in the other. `claude-personal` sets the (undocumented)
-`CLAUDE_CODE_PLUGIN_CACHE_DIR` / `CLAUDE_CODE_PLUGIN_SEED_DIR` at its own dir as a _best-effort_
-attempt to keep them apart, but it's **unverified** — so assume plugins/skills are common to both
-profiles. (Delete those two lines from `claude-personal` if plugins ever misbehave.)
+| State | Per profile? | Notes |
+| --- | --- | --- |
+| Login / account | ✅ isolated | work = macOS Keychain, personal = its own token |
+| `settings.json` / `settings.local.json` (model, permissions, hooks, env) | ✅ isolated | |
+| Global `CLAUDE.md` (your user-level instructions) | ✅ isolated | `~/.claude/CLAUDE.md` vs `~/.claude-personal/CLAUDE.md` |
+| Session history, transcripts, `plans/`, todos | ✅ isolated | |
+| MCP servers (user-scoped) | ✅ isolated | |
+| Per-folder trust / onboarding | ✅ isolated\* | \*personal re-asks every launch — upstream [#36403](https://github.com/anthropics/claude-code/issues/36403) |
+| Caches, telemetry, UI prefs (themes, keybindings) | ✅ isolated | |
+| **Plugins & skills** (and slash-commands — same mechanism) | 🔗 shared | Claude seeds/reads them from the default `~/.claude` regardless of `CLAUDE_CONFIG_DIR` |
+| **A repo's own `CLAUDE.md` / `.claude/`** | 🔗 shared | lives in the repo, so it's identical in both profiles (by design — it belongs to the project, not you) |
+| **`claude` binary, `gum`, Homebrew, your macOS user** | 🔗 shared | one install, used by everything |
+
+**About plugins/skills:** because Claude seeds them from the default `~/.claude`, a plugin enabled in
+one profile tends to appear in the other. `claude-personal` sets the (undocumented)
+`CLAUDE_CODE_PLUGIN_CACHE_DIR` / `CLAUDE_CODE_PLUGIN_SEED_DIR` at its own dir as a _best-effort_ attempt
+to keep them apart, but it's **unverified** — so assume plugins/skills are common to both profiles.
+(Delete those two lines from `claude-personal` if plugins ever misbehave.)
+
+**Global vs project `CLAUDE.md`:** the *global* one above is per profile; a `CLAUDE.md` committed inside
+a repo is part of that repo and applies in **both** profiles when you open it.
 
 ## Token lifecycle
 
