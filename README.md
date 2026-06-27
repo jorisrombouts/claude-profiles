@@ -132,6 +132,7 @@ you open**, and **plugins/skills** (Claude seeds those from the default dir).
 | `settings.json` / `settings.local.json` (model, permissions, hooks, env) | ✅ isolated | |
 | Global `CLAUDE.md` (your user-level instructions) | ✅ isolated | `~/.claude/CLAUDE.md` vs `~/.claude-personal/CLAUDE.md` |
 | Session history, transcripts, `plans/`, todos | ✅ isolated | |
+| Auto-memory (`MEMORY.md` + subagent `agent-memory/`) | ✅ isolated | under each profile's `projects/…/memory/` |
 | MCP servers (user-scoped) | ✅ isolated | |
 | Per-folder trust / onboarding | ✅ isolated\* | \*personal re-asks every launch — upstream [#36403](https://github.com/anthropics/claude-code/issues/36403) |
 | Caches, telemetry, UI prefs (themes, keybindings) | ✅ isolated | |
