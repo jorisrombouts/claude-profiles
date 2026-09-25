@@ -174,6 +174,9 @@ consistently in `claude-profiles.zsh` (and in `install.sh`). Everything else fol
 ## Troubleshooting
 
 - **`command not found: claude-setup`** — you haven't `source ~/.zshrc`'d yet (or you're not in zsh).
+- **`_cp_exec: command not found: claude`** — the real Claude Code binary wasn't on your `PATH` (usually
+  `~/.local/bin/claude`). Re-run `source ~/.zshrc`; recent versions of this repo add that path
+  automatically. If it persists, install or reinstall Claude Code: https://claude.com/claude-code
 - **Menu/wizard is plain text, not styled** — `gum` isn't installed: `brew install gum`.
 - **`status` shows the wrong or duplicate account for a profile** — without its own token a profile
   falls back to the *shared* Keychain login, and `status` reports that profile's last-used account

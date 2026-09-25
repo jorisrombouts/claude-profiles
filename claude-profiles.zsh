@@ -10,7 +10,35 @@
 # Run `claude-setup` for the guided wizard (or `claude-set-token personal` directly). Without a stored
 # token a profile just falls back to the shared Keychain login, so nothing breaks before you set it up.
 #
-# `command claude` always runs the real binary untouched (it bypasses the menu function below).
+# The `claude` function below shadows the real binary — always call it via `_cp_claude` instead.
+
+# Claude Code's native installer drops the binary in ~/.local/bin; ensure it's on PATH.
+case ":${PATH}:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) [[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+
+# Resolve the real Claude Code binary once (the menu function below would shadow `command claude`).
+_cp_resolve_claude_bin() {
+  whence -p claude 2>/dev/null && return
+  local p
+  for p in \
+    "$HOME/.local/bin/claude" \
+    "$HOME/.local/share/claude/ClaudeCode.app/Contents/MacOS/claude"
+  do
+    [[ -x $p ]] && { print -r -- "$p"; return; }
+  done
+  return 1
+}
+_CP_CLAUDE_BIN="$(_cp_resolve_claude_bin)" || _CP_CLAUDE_BIN=
+
+_cp_claude() {
+  if [[ -n $_CP_CLAUDE_BIN ]]; then
+    "$_CP_CLAUDE_BIN" "$@"
+  else
+    command claude "$@"
+  fi
+}
 
 # --- token store (macOS Keychain, service "claude-profiles") --------------------------------------
 
@@ -33,7 +61,7 @@ _cp_exec() {
       export CLAUDE_CODE_PLUGIN_SEED_DIR="$HOME/.claude-personal/plugins"
     fi
     [[ -n $tok ]] && export CLAUDE_CODE_OAUTH_TOKEN="$tok"
-    command claude "$@"
+    _cp_claude "$@"
   )
 }
 
@@ -85,7 +113,7 @@ claude-set-token() {
   print -r -- "Set up a token for '$profile' — sign in as your ${(U)profile} account when the browser opens."
   print -rn -- "Press Enter to run 'claude setup-token' (Ctrl-C to cancel)… "
   local discard; read -r discard || return 1
-  command claude setup-token || { print -r -- "setup-token cancelled." >&2; return 1; }
+  _cp_claude setup-token || { print -r -- "setup-token cancelled." >&2; return 1; }
   local token
   if command -v gum >/dev/null 2>&1; then
     token="$(gum input --password --placeholder 'paste the token here')"
@@ -138,8 +166,8 @@ _cp_setup_work_login() {
 # Guided first-run setup: detects what's already done and walks you through both accounts. Re-runnable
 # anytime to check or change things; install.sh offers to run it right after installing.
 claude-setup() {
-  command -v claude >/dev/null 2>&1 || {
-    print -r -- "claude is not on your PATH. Install Claude Code first: https://claude.com/claude-code" >&2; return 1; }
+  [[ -n $_CP_CLAUDE_BIN ]] || {
+    print -r -- "claude is not installed. Install Claude Code first: https://claude.com/claude-code" >&2; return 1; }
   local have_gum=0; command -v gum >/dev/null 2>&1 && have_gum=1
 
   if (( have_gum )); then
@@ -219,7 +247,7 @@ _claude_menu_plain() {
 
 claude() {
   # Menu ONLY for bare, no-arg, interactive use. Anything else -> real binary (= work), untouched.
-  if (( $# > 0 )) || [[ ! -t 0 || ! -t 1 ]]; then command claude "$@"; return; fi
+  if (( $# > 0 )) || [[ ! -t 0 || ! -t 1 ]]; then _cp_claude "$@"; return; fi
   command -v gum >/dev/null 2>&1 || { _claude_menu_plain; return; }   # graceful fallback, no gum needed
   local choice
   choice="$(gum choose --header="Claude Code profile:" \
