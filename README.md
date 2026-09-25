@@ -35,6 +35,11 @@ signed in.
 
 Not isolated: a repo's own `CLAUDE.md` and `.claude/` (they belong to the repo), and the `claude` binary.
 
+Also not isolated: the Chrome integration. Chrome has one native-host slot for Claude Code, and its wrapper
+runs `claude` without `CLAUDE_CONFIG_DIR`, so the browser is bound to the work profile. Both profiles detect
+the extension; the personal profile keeps it off via `"claudeInChromeDefaultEnabled": false` in its
+`settings.json`.
+
 The file also appends `~/.local/bin`, where Claude Code's native installer puts `claude`, to `PATH` when
 it is missing.
 
