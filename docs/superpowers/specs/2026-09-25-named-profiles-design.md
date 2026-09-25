@@ -19,8 +19,8 @@ profiles, each fully isolated by `CLAUDE_CONFIG_DIR`, managed from one zsh file.
 - Every directory `~/.claude-<name>` is a profile named `<name>`.
 - Names match `^[a-z0-9][a-z0-9_-]*$`. The default profile's name cannot collide with a
   directory-derived name.
-- Discovery happens at source time and again inside every `claude-profile` command, so a profile added
-  by hand is seen on the next command without re-sourcing.
+- Discovery happens at source time. `add` and `remove` define and undefine their launcher; a directory
+  made by hand is picked up by the next shell.
 
 ## Launchers
 
@@ -37,8 +37,8 @@ profiles, each fully isolated by `CLAUDE_CONFIG_DIR`, managed from one zsh file.
 | `claude-profile` or `list` | One line per profile: name, directory, `(default)` marker. |
 | `add <name>` | Validate the name, refuse if the directory exists, `mkdir`, write `settings.json` with `{"claudeInChromeDefaultEnabled": false}`, define the launcher, print `run claude-<name> and /login`. |
 | `remove <name>` | Refuse the default. Refuse unknown names. Print the directory, ask `y/N`, `rm -rf` on yes. |
-| `status` | For each profile: name, then `Login method` and `Email` parsed from `claude auth status --text` with stdin from `/dev/null`. `not logged in` when the output has neither. |
-| `help`, `-h`, `--help`, unknown | Usage text. Unknown returns 1. |
+| `status` | For each profile: name, then the `Login method` and `Email` lines of `claude auth status --text` (stdin from `/dev/null`), or `not logged in` when there are none. |
+| `help`, unknown | Usage text. Unknown returns 1. |
 
 All error paths print one line to stderr and return 1: invalid name, existing profile on `add`,
 unknown profile on `remove`, default on `remove`, `claude` not on `PATH` for `status`.
@@ -67,15 +67,11 @@ as examples.
 temporary directory with a stub `claude` on `PATH` that prints `CLAUDE_CONFIG_DIR` and its arguments,
 then checks:
 
-- Sourcing with `~/.claude-a` and `~/.claude-b` present defines `claude-a`, `claude-b` and the default
-  launcher, and `list` shows all three with the default marked.
-- `claude-a --version` reaches the stub with `CLAUDE_CONFIG_DIR=$HOME/.claude-a`; the default launcher
-  reaches it with the variable unset, even when it was set in the caller.
-- `add c` creates the dir, the settings file with the Chrome flag, and the `claude-c` function; a
-  second `add c` fails; `add "Bad Name"` fails.
-- `remove` of the default fails; `remove` of an unknown name fails; `remove b` with `y` on stdin deletes
-  the dir; with `n` it does not.
-- `status` parses the stub's fake `auth status --text` output into `method (email)` per profile.
+- Sourcing with `~/.claude-a` present defines `claude-a` and the default launcher; `list` marks the default.
+- `claude-a` reaches the stub with `CLAUDE_CONFIG_DIR=$HOME/.claude-a`; the default launcher reaches it
+  with the variable unset even when the caller had it set.
+- `add c` creates the dir, the Chrome flag file and the `claude-c` function; a second `add c` fails.
+- `remove` of the default fails; `remove a` with `y` on stdin deletes the dir.
 
 ## Out of scope
 
